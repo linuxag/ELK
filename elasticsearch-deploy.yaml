@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-deployment
+  labels:
+    app: elasticsearch
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      name: elasticsearch-deployment
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: elasticsearch:7.8.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "200m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+        env:
+          - name: discovery.type
+            value: single-node
+        volumeMounts:
+          - name: elasticsearch-nfs
+            mountPath: /usr/share/elasticsearch/data
+        ports:
+        - name: tcp-port
+          containerPort: 9200
+      volumes:
+        - name: elasticsearch-nfs
+          nfs:
+            server: 192.168.0.2
+            path: "/devops/elasticsearch-nfs"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-svc
+  labels:
+    app: elasticsearch
+    env: prod
+spec:
+  selector:
+    app: elasticsearch
+  type: NodePort
+  ports:
+  - name: elasticsearch
+    port: 9200
+    targetPort: 9200
+    nodePort: 30004

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash-deployment
+  labels:
+    app: logstash
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      name: logstash-deployment
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash
+        image: docker.elastic.co/logstash/logstash:7.8.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+        env:
+          - name: xpack.monitoring.elasticsearch.hosts
+            value: http://elasticsearch-svc:9200
+        volumeMounts:
+          - name: logstash-nfs
+            mountPath: /usr/share/logstash/pipeline
+        ports:
+        - name: tcp-port
+          containerPort: 5044
+      volumes:
+        - name: logstash-nfs
+          nfs:
+            server: 192.168.0.2
+            path: "/devops/logstash/pipeline"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash-svc
+  labels:
+    app: logstash
+    env: prod
+spec:
+  selector:
+    app: logstash
+  type: NodePort
+  ports:
+  - name: logstash
+    port: 5044
+    targetPort: 5044
+    nodePort: 30003
